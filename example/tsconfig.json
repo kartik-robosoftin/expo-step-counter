@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "expo-step-counter": ["../src/index"],
+      "expo-step-counter/*": ["../src/*"]
+    }
+  }
+}

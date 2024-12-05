@@ -1,0 +1,17 @@
+{
+  "platforms": [
+    "apple",
+    "android",
+    "web"
+  ],
+  "apple": {
+    "modules": [
+      "ExpoStepCounterModule"
+    ]
+  },
+  "android": {
+    "modules": [
+      "expo.modules.stepcounter.ExpoStepCounterModule"
+    ]
+  }
+}
