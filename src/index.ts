@@ -1,5 +1,25 @@
-// Reexport the native module. On web, it will be resolved to ExpoStepCounterModule.web.ts
-// and on native platforms to ExpoStepCounterModule.ts
-export { default } from './ExpoStepCounterModule';
-export { default as ExpoStepCounterView } from './ExpoStepCounterView';
-export * from  './ExpoStepCounter.types';
+import { EventSubscription } from "expo-modules-core";
+
+import ExpoStepCounterModule from "./ExpoStepCounterModule";
+
+export type StepChangeEvent = {
+  step: number;
+};
+
+export function requestPermissions() {
+  return ExpoStepCounterModule.requestPermissions();
+}
+
+export function startSendingData() {
+  return ExpoStepCounterModule.startSendingData();
+}
+
+export function stopSendingData() {
+  return ExpoStepCounterModule.stopSendingData();
+}
+
+export function addStepChangedListener(
+  listener: (event: StepChangeEvent) => void
+): EventSubscription {
+  return ExpoStepCounterModule.addListener("onStepCounted", listener);
+}

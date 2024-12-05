@@ -1,73 +1,111 @@
-import { useEvent } from 'expo';
-import ExpoStepCounter, { ExpoStepCounterView } from 'expo-step-counter';
-import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import {
+  requestPermissions,
+  addStepChangedListener,
+  startSendingData,
+  stopSendingData,
+} from "expo-step-counter";
+import { useEffect, useState } from "react";
+import {
+  TouchableOpacity,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 export default function App() {
-  const onChangePayload = useEvent(ExpoStepCounter, 'onChange');
+  const [isPermissionAllowed, setIsPermissionAllowed] = useState(false);
+  const [numOfSteps, setNumOfSteps] = useState(0);
+
+  useEffect(() => {
+    const sub = addStepChangedListener(({ step }) => {
+      setNumOfSteps(step);
+    });
+
+    return () => {
+      sub.remove();
+    };
+  }, []);
+
+  const requestPermissionsRN = () => {
+    requestPermissions();
+    setIsPermissionAllowed(true);
+  };
+
+  const startTracking = () => {
+    startSendingData();
+  };
+
+  const stopTracking = () => {
+    stopSendingData();
+    setNumOfSteps(0);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.container}>
-        <Text style={styles.header}>Module API Example</Text>
-        <Group name="Constants">
-          <Text>{ExpoStepCounter.PI}</Text>
-        </Group>
-        <Group name="Functions">
-          <Text>{ExpoStepCounter.hello()}</Text>
-        </Group>
-        <Group name="Async functions">
-          <Button
-            title="Set value"
-            onPress={async () => {
-              await ExpoStepCounter.setValueAsync('Hello from JS!');
-            }}
-          />
-        </Group>
-        <Group name="Events">
-          <Text>{onChangePayload?.value}</Text>
-        </Group>
-        <Group name="Views">
-          <ExpoStepCounterView
-            url="https://www.example.com"
-            onLoad={({ nativeEvent: { url } }) => console.log(`Loaded: ${url}`)}
-            style={styles.view}
-          />
-        </Group>
-      </ScrollView>
+      <View style={styles.mainContent}>
+        {isPermissionAllowed ? (
+          <>
+            <Text style={styles.stepsTitle}>Steps Taken</Text>
+            <Text style={styles.stepsFont}>{numOfSteps}</Text>
+          </>
+        ) : (
+          <Text style={styles.requestFont}>
+            Please Enable Step Counting Permissions
+          </Text>
+        )}
+      </View>
+      <TouchableOpacity
+        style={styles.ctaButton}
+        onPress={isPermissionAllowed ? startTracking : requestPermissionsRN}
+      >
+        <Text style={styles.ctaButtonText}>
+          {isPermissionAllowed ? "Start Tracking" : "Request Permissions"}
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.ctaButton} onPress={stopTracking}>
+        <Text style={styles.ctaButtonText}>Stop Tracking</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
-function Group(props: { name: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.group}>
-      <Text style={styles.groupHeader}>{props.name}</Text>
-      {props.children}
-    </View>
-  );
-}
-
-const styles = {
-  header: {
-    fontSize: 30,
-    margin: 20,
-  },
-  groupHeader: {
-    fontSize: 20,
-    marginBottom: 20,
-  },
-  group: {
-    margin: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-  },
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#eee',
+    backgroundColor: "#fff",
   },
-  view: {
+  mainContent: {
     flex: 1,
-    height: 200,
+    justifyContent: "center",
+    alignItems: "center",
+    marginHorizontal: 25,
   },
-};
+  requestFont: {
+    fontWeight: "bold",
+    fontSize: 25,
+    textAlign: "center",
+  },
+  stepsFont: {
+    fontSize: 224,
+    fontWeight: "300",
+  },
+  stepsTitle: {
+    fontSize: 50,
+    fontWeight: "bold",
+  },
+  ctaButton: {
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: "purple",
+    justifyContent: "center",
+    alignItems: "center",
+    marginHorizontal: 25,
+    marginBottom: 10,
+  },
+  ctaButtonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+});

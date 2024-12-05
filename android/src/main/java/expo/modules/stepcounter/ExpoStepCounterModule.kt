@@ -1,50 +1,78 @@
 package expo.modules.stepcounter
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.Bundle
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.net.URL
 
+const val kOnStepCounted = "onStepCounted"
+const val kRequestCode = 10
+
+class StepEventListener(val cb: (name: String, body: Bundle?) -> Unit) : SensorEventListener {
+  var steps = 0;
+
+  override fun onSensorChanged(event: SensorEvent?) {
+    event?.values?.get(0)?.let {
+      this.cb(kOnStepCounted, bundleOf("step" to steps++))
+    }
+  }
+
+  override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+}
+
 class ExpoStepCounterModule : Module() {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
+  var sensorManager: SensorManager? = null
+  var stepListener: StepEventListener? = null
   override fun definition() = ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoStepCounter')` in JavaScript.
+    
     Name("ExpoStepCounter")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants(
-      "PI" to Math.PI
-    )
+    Events(kOnStepCounted)
+   
+    Function("requestPermissions") {
+      val activity = appContext.activityProvider?.currentActivity
+      val applicationContext = activity?.applicationContext
+      if(applicationContext != null) {
+        val permissionCheck = ContextCompat.checkSelfPermission(
+          applicationContext,
+          Manifest.permission.ACTIVITY_RECOGNITION
+        )
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Hello world! 👋"
-    }
-
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { value: String ->
-      // Send an event to JavaScript.
-      sendEvent("onChange", mapOf(
-        "value" to value
-      ))
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(ExpoStepCounterView::class) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { view: ExpoStepCounterView, url: URL ->
-        view.webView.loadUrl(url.toString())
+        if(permissionCheck != PackageManager.PERMISSION_DENIED) {
+          ActivityCompat.requestPermissions(
+            activity,
+            arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
+            kRequestCode
+          )
+        }
       }
-      // Defines an event that the view can send to JavaScript.
-      Events("onLoad")
     }
+
+    Function("stopSendingData") {
+      sensorManager?.unregisterListener(stepListener)
+    }
+
+    Function("startSendingData") {
+      val activity = appContext.activityProvider?.currentActivity
+      val applicationContext = activity?.applicationContext
+      if(applicationContext != null) {
+        sensorManager = applicationContext.applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        stepListener = StepEventListener(::sendEvent)
+        val stepSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+        sensorManager?.registerListener(stepListener, stepSensor, SensorManager.SENSOR_DELAY_UI)
+      }
+    }
+
+    
   }
 }
